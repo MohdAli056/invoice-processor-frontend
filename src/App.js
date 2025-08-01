@@ -28,8 +28,9 @@ function App() {
     formData.append('file', file);
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const apiUrl = (process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 const response = await fetch(`${apiUrl}/process`, {
+
 
         method: 'POST',
         body: formData,
