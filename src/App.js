@@ -53,7 +53,7 @@ const response = await fetch(`${apiUrl}/process`, {
     <div className="App">
       <header className="App-header">
         <h1>📄 Invoice Processing System</h1>
-        <p>Upload your invoice PDF or image to extract structured data</p>
+        <p>Upload your invoice (PDF, photo, or scanned image) to extract structured data</p>
       </header>
 
       <main className="App-main">
@@ -61,7 +61,7 @@ const response = await fetch(`${apiUrl}/process`, {
           <h2>Upload Invoice</h2>
           <input
             type="file"
-            accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp"
+  	    accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp"
             onChange={handleFileChange}
             className="file-input"
           />
