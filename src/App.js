@@ -28,21 +28,57 @@ function App() {
     formData.append('file', file);
 
     try {
+      // Remove trailing slash from API URL to prevent double slash issues
       const apiUrl = (process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-const response = await fetch(`${apiUrl}/process`, {
-
-
+      
+      console.log('Uploading to:', `${apiUrl}/process`);
+      
+      const response = await fetch(`${apiUrl}/process`, {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('API Response:', data);
+
+      // Validate the response structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
+
+      // Check if it's an error response
+      if (data.detail) {
+        throw new Error(`Server error: ${data.detail}`);
+      }
+
+      // Ensure extracted_data exists with proper structure
+      if (!data.extracted_data) {
+        console.warn('No extracted_data in response, creating empty structure');
+        data.extracted_data = {
+          vendor_name: null,
+          vendor_email: null,
+          vendor_phone: null,
+          invoice_number: null,
+          customer_number: null,
+          vat_number: null,
+          total_amount: null,
+          dates_found: []
+        };
+      }
+
       setResult(data);
+      
     } catch (err) {
+      console.error('Upload error:', err);
       setError(`Error processing invoice: ${err.message}`);
     } finally {
       setLoading(false);
@@ -61,7 +97,7 @@ const response = await fetch(`${apiUrl}/process`, {
           <h2>Upload Invoice</h2>
           <input
             type="file"
-  	    accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp"
+            accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp"
             onChange={handleFileChange}
             className="file-input"
           />
@@ -70,6 +106,7 @@ const response = await fetch(`${apiUrl}/process`, {
             <div className="file-info">
               <p>Selected: <strong>{file.name}</strong></p>
               <p>Size: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              <p>Type: {file.type || 'Unknown'}</p>
             </div>
           )}
 
@@ -95,47 +132,42 @@ const response = await fetch(`${apiUrl}/process`, {
             <div className="result-grid">
               <div className="result-item">
                 <strong>Vendor Name:</strong>
-                <span>{result.extracted_data.vendor_name || 'Not found'}</span>
+                <span>{result.extracted_data?.vendor_name || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>Vendor Phone:</strong>
-                <span>{result.extracted_data.vendor_phone || 'Not found'}</span>
+                <span>{result.extracted_data?.vendor_phone || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>Vendor Email:</strong>
-                <span>{result.extracted_data.vendor_email || 'Not found'}</span>
+                <span>{result.extracted_data?.vendor_email || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>Invoice Number:</strong>
-                <span>{result.extracted_data.invoice_number || 'Not found'}</span>
+                <span>{result.extracted_data?.invoice_number || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>Customer Number:</strong>
-                <span>{result.extracted_data.customer_number || 'Not found'}</span>
+                <span>{result.extracted_data?.customer_number || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>VAT Number:</strong>
-                <span>{result.extracted_data.vat_number || 'Not found'}</span>
+                <span>{result.extracted_data?.vat_number || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>Total Amount:</strong>
-                <span>{result.extracted_data.total_amount || 'Not found'}</span>
+                <span>{result.extracted_data?.total_amount || 'Not found'}</span>
               </div>
               <div className="result-item">
                 <strong>Dates Found:</strong>
-                <span>{result.extracted_data.dates_found?.join(', ') || 'Not found'}</span>
+                <span>{result.extracted_data?.dates_found?.join(', ') || 'Not found'}</span>
               </div>
-            </div>
-
-            <div className="json-output">
-              <h3>📋 JSON Output</h3>
-              <pre>{JSON.stringify(result, null, 2)}</pre>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-export default App;
+              {result.file_type && (
+                <div className="result-item">
+                  <strong>File Type:</strong>
+                  <span>{result.file_type}</span>
+                </div>
+              )}
+              {result.file_size_bytes && (
+                <div className="result-item">
+                  <strong>File Size:</strong>
