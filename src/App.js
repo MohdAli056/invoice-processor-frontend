@@ -28,9 +28,7 @@ function App() {
     formData.append('file', file);
 
     try {
-      // Remove trailing slash from API URL to prevent double slash issues
       const apiUrl = (process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-      
       console.log('Uploading to:', `${apiUrl}/process`);
       
       const response = await fetch(`${apiUrl}/process`, {
@@ -39,7 +37,6 @@ function App() {
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -50,17 +47,14 @@ function App() {
       const data = await response.json();
       console.log('API Response:', data);
 
-      // Validate the response structure
       if (!data || typeof data !== 'object') {
         throw new Error('Invalid response format from server');
       }
 
-      // Check if it's an error response
       if (data.detail) {
         throw new Error(`Server error: ${data.detail}`);
       }
 
-      // Ensure extracted_data exists with proper structure
       if (!data.extracted_data) {
         console.warn('No extracted_data in response, creating empty structure');
         data.extracted_data = {
@@ -162,12 +156,17 @@ function App() {
                 <strong>Dates Found:</strong>
                 <span>{result.extracted_data?.dates_found?.join(', ') || 'Not found'}</span>
               </div>
-              {result.file_type && (
-                <div className="result-item">
-                  <strong>File Type:</strong>
-                  <span>{result.file_type}</span>
-                </div>
-              )}
-              {result.file_size_bytes && (
-                <div className="result-item">
-                  <strong>File Size:</strong>
+            </div>
+
+            <div className="json-output">
+              <h3>📋 JSON Output</h3>
+              <pre>{JSON.stringify(result, null, 2)}</pre>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default App;
