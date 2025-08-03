@@ -1,11 +1,35 @@
 import React, { useState } from 'react';
 import './App.css';
 
+// Helper function to convert JSON to CSV
+const convertToCSV = (data) => {
+  const extractedData = data.extracted_data || {};
+  const rows = [
+    ['Field', 'Value'],
+    ['Vendor Name', extractedData.vendor_name || 'Not found'],
+    ['Vendor Email', extractedData.vendor_email || 'Not found'],
+    ['Vendor Phone', extractedData.vendor_phone || 'Not found'],
+    ['Invoice Number', extractedData.invoice_number || 'Not found'],
+    ['Invoice Date', extractedData.invoice_date || 'Not found'],
+    ['VAT Number', extractedData.vat_number || 'Not found'],
+    ['Total Amount', extractedData.total_amount || 'Not found'],
+    ['Subtotal', extractedData.subtotal || 'Not found'],
+    ['Tax Amount', extractedData.tax_amount || 'Not found'],
+    ['Payment Terms', extractedData.payment_terms || 'Not found'],
+    ['Dates Found', (extractedData.dates_found || []).join(', ') || 'None'],
+    ['Processing Method', data.processing_method || 'Unknown'],
+    ['Processing Time', data.processing_timestamp || 'Unknown'],
+    ['Confidence Score', data.confidence_scores?.overall || 'Not available']
+  ];
+  return rows.map(row => row.join(',')).join('\n');
+};
+
 function App() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [processingMethod, setProcessingMethod] = useState('ai');
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
@@ -26,13 +50,12 @@ function App() {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('processing_method', processingMethod);
 
     try {
-      // Clean API URL to prevent double slashes
       const apiUrl = (process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-      
       console.log('Uploading to:', `${apiUrl}/process`);
-      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+      console.log('Processing method:', processingMethod);
       
       const response = await fetch(`${apiUrl}/process`, {
         method: 'POST',
@@ -40,7 +63,6 @@ function App() {
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -51,17 +73,14 @@ function App() {
       const data = await response.json();
       console.log('API Response:', data);
 
-      // Validate the response structure
       if (!data || typeof data !== 'object') {
         throw new Error('Invalid response format from server');
       }
 
-      // Check if it's an error response
       if (data.detail) {
         throw new Error(`Server error: ${data.detail}`);
       }
 
-      // Ensure extracted_data exists
       if (!data.extracted_data) {
         console.warn('No extracted_data in response, creating empty structure');
         data.extracted_data = {
@@ -86,16 +105,77 @@ function App() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!result) return;
+    
+    const csvContent = convertToCSV(result);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `invoice_data_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>📄 Invoice Processing System</h1>
+        <h1>🤖📄 AI-Powered Invoice Processing System</h1>
         <p>Upload your invoice (PDF, photo, or scanned image) to extract structured data</p>
       </header>
 
       <main className="App-main">
         <div className="upload-section">
           <h2>Upload Invoice</h2>
+          
+          {/* Processing Method Selection */}
+          <div className="processing-options">
+            <h3>Choose Processing Method:</h3>
+            <div className="method-description">
+              {processingMethod === 'ai' ? (
+                <p>
+                  🤖 <strong>AI Processing:</strong> Uses Google Gemini AI for superior accuracy on complex invoices. Best for handling various invoice formats.
+                </p>
+              ) : (
+                <p>
+                  📄 <strong>Traditional OCR:</strong> Uses local processing for privacy-conscious users. Best for standard invoice formats.
+                </p>
+              )}
+            </div>
+            <div className="radio-group">
+              <label className="radio-option">
+                <input 
+                  type="radio" 
+                  name="processing" 
+                  value="ai" 
+                  checked={processingMethod === 'ai'}
+                  onChange={(e) => setProcessingMethod(e.target.value)}
+                />
+                <span className="radio-label">
+                  🤖 <strong>AI Processing</strong>
+                  <small>Uses Google Gemini AI for superior accuracy on complex invoices. More accurate but data is processed by Google's AI service.</small>
+                </span>
+              </label>
+              
+              <label className="radio-option">
+                <input 
+                  type="radio" 
+                  name="processing" 
+                  value="traditional" 
+                  checked={processingMethod === 'traditional'}
+                  onChange={(e) => setProcessingMethod(e.target.value)}
+                />
+                <span className="radio-label">
+                  🔒 <strong>Traditional OCR</strong>
+                  <small>Processes your invoice locally using Tesseract OCR. More private but may be less accurate on complex layouts.</small>
+                </span>
+              </label>
+            </div>
+          </div>
+
           <input
             type="file"
             accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp"
@@ -116,7 +196,11 @@ function App() {
             disabled={!file || loading}
             className="upload-button"
           >
-            {loading ? '🔄 Processing...' : '🚀 Process Invoice'}
+            {loading ? (
+              processingMethod === 'ai' ? '🤖 AI Processing...' : '🔍 OCR Processing...'
+            ) : (
+              processingMethod === 'ai' ? '🚀 Process with AI' : '🚀 Process with OCR'
+            )}
           </button>
         </div>
 
@@ -124,12 +208,6 @@ function App() {
           <div className="error-section">
             <h3>❌ Error</h3>
             <p>{error}</p>
-            <details style={{marginTop: '10px', fontSize: '0.9em', color: '#666'}}>
-              <summary>Debug Information</summary>
-              <p>API URL: {process.env.REACT_APP_API_URL || 'http://localhost:8000'}</p>
-              <p>File: {file ? `${file.name} (${file.size} bytes)` : 'None selected'}</p>
-              <p>Check browser console for detailed logs</p>
-            </details>
           </div>
         )}
 
@@ -137,26 +215,24 @@ function App() {
           <div className="result-section">
             <h2>✅ Extraction Results</h2>
             
-            {/* File Information */}
-            <div className="file-summary">
-              <h3>📁 File Information</h3>
+            <div className="processing-info">
+              <h3>📊 Processing Information</h3>
               <div className="info-grid">
                 <div className="info-item">
-                  <strong>Filename:</strong> {result.filename || 'Unknown'}
+                  <strong>Method Used:</strong> {result.processing_method || 'Unknown'}
                 </div>
                 <div className="info-item">
-                  <strong>File Size:</strong> {result.file_size_bytes ? `${(result.file_size_bytes / 1024).toFixed(1)} KB` : 'Unknown'}
+                  <strong>Confidence:</strong> {result.confidence || 'Unknown'}
                 </div>
                 <div className="info-item">
-                  <strong>File Type:</strong> {result.file_type || 'Unknown'}
+                  <strong>AI Processing:</strong> {result.ai_processing ? '✅ Yes' : '❌ No'}
                 </div>
                 <div className="info-item">
-                  <strong>Processing Status:</strong> {result.success ? '✅ Success' : '❌ Failed'}
+                  <strong>Success:</strong> {result.success ? '✅ Yes' : '❌ No'}
                 </div>
               </div>
             </div>
 
-            {/* Extracted Data */}
             <div className="extraction-results">
               <h3>🔍 Extracted Data</h3>
               <div className="result-grid">
@@ -195,65 +271,16 @@ function App() {
               </div>
             </div>
 
-            {/* JSON Output */}
             <div className="json-output">
               <h3>📋 Complete JSON Response</h3>
               <pre>{JSON.stringify(result, null, 2)}</pre>
-            </div>
-
-            {/* Download Options */}
-            <div className="download-section">
-              <h3>💾 Export Results</h3>
-              <button 
-                className="download-button"
-                onClick={() => {
-                  const dataStr = JSON.stringify(result, null, 2);
-                  const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                  const url = URL.createObjectURL(dataBlob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `invoice-extraction-${Date.now()}.json`;
-                  link.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                📄 Download JSON
-              </button>
-              
-              <button 
-                className="download-button"
-                onClick={() => {
-                  const csvData = [
-                    ['Field', 'Value'],
-                    ['Vendor Name', result.extracted_data?.vendor_name || ''],
-                    ['Vendor Email', result.extracted_data?.vendor_email || ''],
-                    ['Vendor Phone', result.extracted_data?.vendor_phone || ''],
-                    ['Invoice Number', result.extracted_data?.invoice_number || ''],
-                    ['Customer Number', result.extracted_data?.customer_number || ''],
-                    ['VAT Number', result.extracted_data?.vat_number || ''],
-                    ['Total Amount', result.extracted_data?.total_amount || ''],
-                    ['Dates Found', result.extracted_data?.dates_found?.join('; ') || '']
-                  ];
-                  
-                  const csvContent = csvData.map(row => row.map(field => `"${field}"`).join(',')).join('\n');
-                  const dataBlob = new Blob([csvContent], {type: 'text/csv'});
-                  const url = URL.createObjectURL(dataBlob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `invoice-extraction-${Date.now()}.csv`;
-                  link.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                📊 Download CSV
-              </button>
             </div>
           </div>
         )}
       </main>
 
       <footer className="App-footer">
-        <p>Built with React, FastAPI, Tesseract OCR, and intelligent NLP processing</p>
+        <p>🤖 AI-Powered with Google Gemini + 🔍 Traditional OCR with Tesseract</p>
         <p>Supports PDF, JPG, PNG, TIFF, BMP, and WebP formats</p>
       </footer>
     </div>
