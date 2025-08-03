@@ -1,6 +1,45 @@
-# Getting Started with Create React App
+# Invoice Processor Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern React-based web application for processing invoices using both traditional OCR and AI-powered methods. This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Features
+
+- Upload and process invoices (PDF/Image formats)
+- Dual processing options:
+  - Traditional OCR processing
+  - AI-powered processing using Gemini
+- Real-time processing status
+- Responsive design
+- Easy-to-use interface
+
+## Prerequisites
+
+Before running the application, ensure you have:
+
+- Node.js 16.x or higher
+- npm or yarn package manager
+- Backend API endpoint configured
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/MohdAli056/invoice-processor-frontend.git
+cd invoice-processor-frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Configure environment variables:
+Create a `.env` file with:
+```env
+NEXT_PUBLIC_API_URL=your_backend_api_url
+```
 
 ## Available Scripts
 
@@ -68,3 +107,45 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Deployment
+
+### Vercel Deployment
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Add environment variables in Vercel dashboard:
+   - `NEXT_PUBLIC_API_URL`: Your Render backend URL
+
+The `vercel.json` configuration is already set up for optimal deployment.
+
+## Project Structure
+
+```
+frontend/
+├── public/           # Static files
+├── src/             
+│   ├── App.js       # Main application component
+│   ├── index.js     # Application entry point
+│   └── components/  # React components
+├── package.json     # Dependencies and scripts
+└── vercel.json      # Vercel deployment config
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Acknowledgments
+
+- Create React App
+- React.js
+- Vercel for hosting
